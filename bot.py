@@ -14,7 +14,6 @@ CHANNEL_ID = -1003603082549
 AUTO_DELETE_TIME = 300  # 5 minutes
 # ==========================
 
-tgcrypto
 flask
 app = Client(
     "FileStoreBot",
