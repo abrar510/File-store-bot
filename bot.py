@@ -1,86 +1,143 @@
 from pyrogram import Client, filters
+from pyrogram.errors import UserNotParticipant
 import asyncio
 
 # ==========================
+
 # CONFIG
+
 # ==========================
+
 API_ID = 36675180
 API_HASH = "c1a9924f9bb7ab9e31d76274bf82b571"
 BOT_TOKEN = "8774111930:AAHbJM9RGVk_tuxkrMRI_iXMUwmUGYB9bK0"
 
-# Example: -1003603082549
-CHANNEL_ID = -1003603082549
+# Force Join Channel
 
-AUTO_DELETE_TIME = 300  # 5 minutes
+FORCE_SUB_CHANNEL = -1003310527316
+
+# File Store Channel
+
+STORE_CHANNEL = -1003603082549
+
+# Auto Delete Time (10 Minutes)
+
+AUTO_DELETE_TIME = 600
+
 # ==========================
 
 app = Client(
-    "FileStoreBot",
-    api_id=API_ID,
-    api_hash=API_HASH,
-    bot_token=BOT_TOKEN)
+"FileStoreBot",
+api_id=API_ID,
+api_hash=API_HASH,
+bot_token=BOT_TOKEN
+)
+
 # ==========================
-# START COMMAND
+
+# FORCE JOIN CHECK
+
 # ==========================
+
+async def is_joined(client, user_id):
+try:
+await client.get_chat_member(FORCE_SUB_CHANNEL, user_id)
+return True
+except UserNotParticipant:
+return False
+except:
+return False
+
+# ==========================
+
+# START
+
+# ==========================
+
 @app.on_message(filters.command("start"))
-async def start_handler(client, message):
+async def start(client, message):
 
-    if len(message.command) > 1:
+```
+if not await is_joined(client, message.from_user.id):
 
-        try:
-            file_msg_id = int(message.command[1])
+    await message.reply_text(
+        "⚠️ Please join our channel first and then try again."
+    )
+    return
 
-            sent_file = await client.copy_message(
-                chat_id=message.chat.id,
-                from_chat_id=CHANNEL_ID,
-                message_id=file_msg_id
-            )
+if len(message.command) > 1:
 
-            notice = await message.reply_text(
-                f"⚠️ This file will be deleted automatically in {AUTO_DELETE_TIME//60} minutes."
-            )
+    try:
+        msg_id = int(message.command[1])
 
-            await asyncio.sleep(AUTO_DELETE_TIME)
-
-            try:
-                await sent_file.delete()
-                await notice.delete()
-            except:
-                pass
-
-        except Exception:
-            await message.reply_text("❌ File not found.")
-
-    else:
-        await message.reply_text(
-            "📂 Send me any file.\n"
-            "I will store it and generate a shareable link."
+        sent_file = await client.copy_message(
+            chat_id=message.chat.id,
+            from_chat_id=STORE_CHANNEL,
+            message_id=msg_id
         )
 
+        warning = await message.reply_text(
+            "›› Yᴏᴜʀ ғɪʟᴇs ᴡɪʟʟ ʙᴇ ᴅᴇʟᴇᴛᴇᴅ ᴡɪᴛʜɪɴ 10 Mɪɴᴜᴛᴇs.\n\n"
+            "Sᴏ ᴘʟᴇᴀsᴇ ғᴏʀᴡᴀʀᴅ ᴛʜᴇᴍ ᴛᴏ Saved Messages "
+            "ғᴏʀ ғᴜᴛᴜʀᴇ ᴀᴠᴀɪʟᴀʙɪʟɪᴛʏ."
+        )
+
+        await asyncio.sleep(AUTO_DELETE_TIME)
+
+        try:
+            await sent_file.delete()
+            await warning.delete()
+        except:
+            pass
+
+    except:
+        await message.reply_text("❌ File not found.")
+
+else:
+    await message.reply_text(
+        "📂 Send me any file.\n"
+        "I will store it and generate a shareable link."
+    )
+```
+
 # ==========================
+
 # STORE FILES
+
 # ==========================
+
 @app.on_message(
-    filters.private &
-    (filters.document |
-     filters.video |
-     filters.audio |
-     filters.photo)
+filters.private &
+(filters.document |
+filters.video |
+filters.audio |
+filters.photo)
 )
 async def store_file(client, message):
 
-    stored = await message.copy(CHANNEL_ID)
-
-    bot_username = (await client.get_me()).username
-
-    link = f"https://t.me/{bot_username}?start={stored.id}"
+```
+if not await is_joined(client, message.from_user.id):
 
     await message.reply_text(
-        f"✅ File Stored Successfully!\n\n"
-        f"🔗 Share Link:\n{link}"
+        "⚠️ Please join our channel first and then try again."
     )
+    return
+
+stored = await message.copy(STORE_CHANNEL)
+
+bot_username = (await client.get_me()).username
+
+link = f"https://t.me/{bot_username}?start={stored.id}"
+
+await message.reply_text(
+    f"✅ File Stored Successfully!\n\n🔗 {link}"
+)
+```
 
 # ==========================
-# RUN BOT
+
+# RUN
+
 # ==========================
+
 app.run()
