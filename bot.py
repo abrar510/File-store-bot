@@ -1,24 +1,24 @@
+from pyrogram import Client, filters
+import asyncio
 
 # ==========================
 # CONFIG
 # ==========================
-API_ID = "36675180"
+API_ID = 36675180
 API_HASH = "c1a9924f9bb7ab9e31d76274bf82b571"
 BOT_TOKEN = "8774111930:AAHbJM9RGVk_tuxkrMRI_iXMUwmUGYB9bK0"
 
-# Example: -1001234567890
-CHANNEL_ID = -1001234567890
+# Example: -1003603082549
+CHANNEL_ID = -1003603082549
 
 AUTO_DELETE_TIME = 300  # 5 minutes
 # ==========================
 
 app = Client(
     "FileStoreBot",
-    api_id= 36675180,
-    api_hash=c1a9924f9bb7ab9e31d76274bf82b571,
-    bot_token= 8774111930:AAHbJM9RGVk_tuxkrMRI_iXMUwmUGYB9bK0
-)
-
+    api_id=API_ID,
+    api_hash=API_HASH,
+    bot_token=BOT_TOKEN)
 # ==========================
 # START COMMAND
 # ==========================
@@ -32,7 +32,7 @@ async def start_handler(client, message):
 
             sent_file = await client.copy_message(
                 chat_id=message.chat.id,
-                from_chat_id= -1003603082549,
+                from_chat_id=CHANNEL_ID,
                 message_id=file_msg_id
             )
 
@@ -69,11 +69,11 @@ async def start_handler(client, message):
 )
 async def store_file(client, message):
 
-    stored = await message.copy(-1003603082549)
+    stored = await message.copy(CHANNEL_ID)
 
     bot_username = (await client.get_me()).username
 
-    link = f"https://t.me/akfilestorev1bot?start={stored.id}"
+    link = f"https://t.me/{bot_username}?start={stored.id}"
 
     await message.reply_text(
         f"✅ File Stored Successfully!\n\n"
