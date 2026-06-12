@@ -10,10 +10,6 @@ import asyncio
 # CONFIG
 # =========================
 
-API_ID = 36675180
-API_HASH = "c1a9924f9bb7ab9e31d76274bf82b571"
-BOT_TOKEN = "8774111930:AAHbJM9RGVk_tuxkrMRI_iXMUwmUGYB9bK0"
-
 # Force Subscribe Channel
 FORCE_CHANNEL = -1003310527316
 
