@@ -1,17 +1,10 @@
-from pyrogram import Client
+from motor.motor_asyncio import AsyncIOMotorClient
 import os
 
-API_ID = int(os.getenv("API_ID"))
-API_HASH = os.getenv("API_HASH")
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-
-app = Client(
-    "testbot",
-    api_id=API_ID,
-    api_hash=API_HASH,
-    bot_token=BOT_TOKEN
+mongo = AsyncIOMotorClient(
+    os.getenv("MONGO_URI")
 )
 
-print("Bot Started Successfully")
+db = mongo["file_store_bot"]
 
-app.run()
+print("MongoDB Connected")
