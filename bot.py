@@ -14,12 +14,14 @@ from telegram.ext import (
 
 # ================= CONFIG =================
 
-BOT_TOKEN = "YOUR_BOT_TOKEN"
-MONGO_URI = "mongodb://localhost:27017"
+import os
 
-OWNER_ID = 123456789
-CHANNEL_USERNAME = "@yourchannel"
-BOT_USERNAME = "YourBotUsername"
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+MONGO_URI = os.getenv("MONGO_URI")
+OWNER_ID = int(os.getenv("OWNER_ID"))
+
+CHANNEL_USERNAME = os.getenv("CHANNEL_USERNAME")
+BOT_USERNAME = os.getenv("BOT_USERNAME")
 
 # ===========================================
 
