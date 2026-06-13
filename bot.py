@@ -56,23 +56,6 @@ async def is_joined(user_id):
     except Exception as e:
         print("JOIN CHECK ERROR:", e)
         return False
-        
-buttons = InlineKeyboardMarkup(
-    [
-        [
-            InlineKeyboardButton(
-                "📢 Join Channel",
-                url=CHANNEL_LINK
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "🔄 Try Again",
-                url=f"https://t.me/{(await client.get_me()).username}?start={message.command[1]}"
-            )
-        ]
-    ]
-)
 
 # =========================
 # AUTO DELETE
@@ -133,7 +116,7 @@ async def start_handler(client, message):
             )
 
             warn = await message.reply_text(
-               "›› Yᴏᴜʀ ғɪʟᴇs ᴡɪʟʟ ʙᴇ ᴅᴇʟᴇᴛᴇᴅ ᴡɪᴛʜɪɴ 10 Mɪɴᴜᴛᴇs.\n"
+               "›› Yᴏᴜʀ ғɪʟᴇs ᴡɪʟʟ ʙᴇ ᴅᴇʟᴇᴛᴇᴅ ᴡɪᴛʜɪɴ 10 Mɪɴᴜᴛᴇs.\n\n"
     "Sᴏ ᴘʟᴇᴀsᴇ ғᴏʀᴡᴀʀᴅ ᴛʜᴇᴍ ᴛᴏ Saved Messages ғᴏʀ ғᴜᴛᴜʀᴇ ᴀᴠᴀɪʟᴀʙɪʟɪᴛʏ."
             )
 
@@ -149,8 +132,8 @@ async def start_handler(client, message):
     else:
 
         await message.reply_text(
-            "📂 আমাকে একটি File পাঠান।\n\n"
-            "আমি Link তৈরি করে দেব।"
+            "📂 Send me a File\n\n"
+            "I will give you a Link"
         )
 
 
