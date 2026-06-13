@@ -44,13 +44,13 @@ app = Client(
 )
 
 # ==========================
-# BATCH MEMORY
+# MEMORY
 # ==========================
 
 ACTIVE_BATCH = {}
 
 # ==========================
-# FORCE SUBSCRIBE
+# FORCE SUB CHECK
 # ==========================
 
 async def is_joined(user_id):
@@ -78,7 +78,7 @@ async def is_joined(user_id):
         return False
 
 # ==========================
-# BUTTONS
+# JOIN BUTTON
 # ==========================
 
 def join_button(callback_data):
@@ -116,17 +116,6 @@ async def auto_delete(messages):
             await msg.delete()
         except:
             pass
-
-# ==========================
-# HOME
-# ==========================
-
-
-
-# ==========================
-# RUN
-# ==========================
-
 # ==========================
 # SINGLE FILE STORE
 # ==========================
@@ -141,21 +130,27 @@ async def auto_delete(messages):
         filters.animation
     )
 )
-async def single_file_store(client, message):
+async def single_file_store(
+    client,
+    message
+):
 
     user_id = message.from_user.id
 
-    # Batch mode হলে skip
+    # Batch Mode হলে Skip
     if user_id in ACTIVE_BATCH:
         return
 
-    # Force Subscribe Check
+    # Force Subscribe
     if not await is_joined(user_id):
 
         await message.reply_text(
-            "⚠️ First join our channel.",
-            reply_markup=join_button("ignore")
+            "⚠️ First Join Our Channel",
+            reply_markup=join_button(
+                "ignore"
+            )
         )
+
         return
 
     try:
@@ -164,7 +159,9 @@ async def single_file_store(client, message):
             STORE_CHANNEL
         )
 
-        file_code = str(uuid.uuid4())[:8]
+        file_code = str(
+            uuid.uuid4()
+        )[:8]
 
         await save_file(
             file_code,
@@ -174,27 +171,26 @@ async def single_file_store(client, message):
         me = await client.get_me()
 
         link = (
-            f"https://t.me/{me.username}"
+            f"https://t.me/"
+            f"{me.username}"
             f"?start=file_{file_code}"
         )
 
         await message.reply_text(
-            f"✅ File Stored Successfully!\n\n🔗 {link}"
+            "✅ File Stored Successfully!\n\n"
+            f"🔗 {link}"
         )
 
     except Exception as e:
 
-        print("STORE ERROR:", e)
-
-        await message.reply_text(
-            "❌ Failed to store file."
+        print(
+            "STORE ERROR:",
+            e
         )
 
-
-# ==========================
-# OPEN SINGLE FILE
-# ==========================
-
+        await message.reply_text(
+            f"❌ Error:\n{e}"
+        )
 
 
 # ==========================
@@ -219,7 +215,7 @@ async def check_file_button(
     ):
 
         await query.answer(
-            "❌ Join channel first",
+            "❌ Join Channel First",
             show_alert=True
         )
 
@@ -232,7 +228,7 @@ async def check_file_button(
     if not data:
 
         await query.answer(
-            "❌ File not found",
+            "❌ File Not Found",
             show_alert=True
         )
 
@@ -241,11 +237,11 @@ async def check_file_button(
     sent = await client.copy_message(
         chat_id=query.message.chat.id,
         from_chat_id=STORE_CHANNEL,
-        message_id=data["msg_id"]
+        message_id=data["message_id"]
     )
 
     warn = await query.message.reply_text(
-        "⚠️ File will be deleted after 10 minutes."
+        "⚠️ File Will Be Deleted After 10 Minutes"
     )
 
     asyncio.create_task(
@@ -258,20 +254,24 @@ async def check_file_button(
         "✅ Verified",
         show_alert=True
     )
-    
-# ==========================
+    # ==========================
 # START BATCH
 # ==========================
 
 @app.on_message(filters.command("batch"))
-async def start_batch(client, message):
+async def start_batch(
+    client,
+    message
+):
 
-    ACTIVE_BATCH[message.from_user.id] = []
+    ACTIVE_BATCH[
+        message.from_user.id
+    ] = []
 
     await message.reply_text(
         "📦 Batch Mode Started\n\n"
-        "Send files now.\n"
-        "When finished send /done"
+        "Send Files Now.\n"
+        "When Finished Send /done"
     )
 
 
@@ -289,15 +289,114 @@ async def start_batch(client, message):
         filters.animation
     )
 )
+async def batch_collector(
+    client,
+    message
+):
+
+    user_id = message.from_user.id
+
+    if user_id not in ACTIVE_BATCH:
+        return
+
+    try:
+
+        stored = await message.copy(
+            STORE_CHANNEL
+        )
+
+        ACTIVE_BATCH[
+            user_id
+        ].append(
+            stored.id
+        )
+
+        await message.reply_text(
+            "✅ Added To Batch"
+        )
+
+    except Exception as e:
+
+        print(
+            "BATCH STORE ERROR:",
+            e
+        )
+
+        await message.reply_text(
+            "❌ Failed To Add File"
+        )
 
 
 # ==========================
 # DONE BATCH
 # ==========================
 
+@app.on_message(filters.command("done"))
+async def done_batch(
+    client,
+    message
+):
 
-# ==========================
-# FINAL START HANDLER
+    user_id = message.from_user.id
+
+    if user_id not in ACTIVE_BATCH:
+
+        await message.reply_text(
+            "❌ No Active Batch"
+        )
+
+        return
+
+    if len(
+        ACTIVE_BATCH[user_id]
+    ) == 0:
+
+        await message.reply_text(
+            "❌ No Files In Batch"
+        )
+
+        return
+
+    try:
+
+        batch_code = str(
+            uuid.uuid4()
+        )[:8]
+
+        await save_batch(
+            batch_code,
+            ACTIVE_BATCH[user_id]
+        )
+
+        del ACTIVE_BATCH[
+            user_id
+        ]
+
+        me = await client.get_me()
+
+        link = (
+            f"https://t.me/"
+            f"{me.username}"
+            f"?start=batch_{batch_code}"
+        )
+
+        await message.reply_text(
+            "✅ Batch Created Successfully!\n\n"
+            f"🔗 {link}"
+        )
+
+    except Exception as e:
+
+        print(
+            "DONE ERROR:",
+            e
+        )
+
+        await message.reply_text(
+            "❌ Failed To Create Batch"
+        )
+        # ==========================
+# START HANDLER
 # ==========================
 
 @app.on_message(filters.command("start"))
@@ -306,7 +405,6 @@ async def start_handler(
     message
 ):
 
-    # Home
     if len(message.command) == 1:
 
         await message.reply_text(
@@ -357,7 +455,7 @@ async def start_handler(
         sent = await client.copy_message(
             chat_id=message.chat.id,
             from_chat_id=STORE_CHANNEL,
-            message_id=data["msg_id"]
+            message_id=data["message_id"]
         )
 
         warn = await message.reply_text(
@@ -410,7 +508,7 @@ async def start_handler(
 
         sent_messages = []
 
-        for msg_id in data["ids"]:
+        for msg_id in data["message_ids"]:
 
             sent = await client.copy_message(
                 chat_id=message.chat.id,
@@ -435,6 +533,9 @@ async def start_handler(
                 sent_messages
             )
         )
+
+        return
+
 
 # ==========================
 # CHECK BATCH BUTTON
@@ -481,7 +582,7 @@ async def check_batch_button(
 
     try:
 
-        for msg_id in data["ids"]:
+        for msg_id in data["message_ids"]:
 
             sent = await client.copy_message(
                 chat_id=query.message.chat.id,
@@ -514,7 +615,10 @@ async def check_batch_button(
 
     except Exception as e:
 
-        print("BATCH ERROR:", e)
+        print(
+            "BATCH ERROR:",
+            e
+        )
 
         await query.answer(
             "❌ Failed To Send Files",
@@ -544,6 +648,8 @@ async def ignore_button(
 # RUN
 # ==========================
 
-print("Bot Started Successfully")
+print(
+    "Bot Started Successfully"
+)
 
 app.run()
