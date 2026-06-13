@@ -44,23 +44,35 @@ app = Client(
 
 async def is_joined(user_id):
     try:
-        member = await app.get_chat_member(
+        await app.get_chat_member(
             FORCE_CHANNEL,
             user_id
         )
-
-        print("Member:", member)
-        print("Status:", member.status)
-
         return True
 
     except UserNotParticipant:
-        print("User not participant")
         return False
 
     except Exception as e:
         print("JOIN CHECK ERROR:", e)
         return False
+        
+buttons = InlineKeyboardMarkup(
+    [
+        [
+            InlineKeyboardButton(
+                "📢 Join Channel",
+                url=CHANNEL_LINK
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "🔄 Try Again",
+                url=f"https://t.me/{(await client.get_me()).username}?start={message.command[1]}"
+            )
+        ]
+    ]
+)
 
 # =========================
 # AUTO DELETE
