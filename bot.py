@@ -168,7 +168,7 @@ async def store_file(client, message):
         )
 
         await message.reply_text(
-            "⚠️ আগে চ্যানেলে Join করুন।",
+            "⚠️ You Have to Join the Channel First",
             reply_markup=buttons
         )
         return
