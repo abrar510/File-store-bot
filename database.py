@@ -11,10 +11,6 @@ files_col = db["files"]
 batches_col = db["batches"]
 
 
-# ==========================
-# SINGLE FILE
-# ==========================
-
 async def save_file(file_id, message_id):
 
     await files_col.update_one(
@@ -34,10 +30,6 @@ async def get_file(file_id):
         {"file_id": file_id}
     )
 
-
-# ==========================
-# BATCH
-# ==========================
 
 async def save_batch(batch_id, message_ids):
 
