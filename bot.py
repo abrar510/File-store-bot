@@ -100,7 +100,7 @@ async def start_handler(client, message):
                     [
                         InlineKeyboardButton(
                             "✅ Check Channel",
-                            callback_data=f"check_{file_id}"
+                            callback_data="checksub"
                         )
                     ]
                 ]
