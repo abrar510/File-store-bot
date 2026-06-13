@@ -49,12 +49,17 @@ async def is_joined(user_id):
             user_id
         )
 
-        return member.status not in ["left", "kicked"]
+        print("Member:", member)
+        print("Status:", member.status)
+
+        return True
 
     except UserNotParticipant:
+        print("User not participant")
         return False
 
-    except Exception:
+    except Exception as e:
+        print("JOIN CHECK ERROR:", e)
         return False
 
 # =========================
