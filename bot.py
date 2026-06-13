@@ -121,26 +121,11 @@ async def auto_delete(messages):
 # HOME
 # ==========================
 
-@app.on_message(filters.command("start"))
-async def start_home(
-    client,
-    message
-):
 
-    if len(message.command) == 1:
-
-        await message.reply_text(
-            "📂 Send a file to generate link.\n\n"
-            "📦 Use /batch for batch links."
-        )
-
-        return
 
 # ==========================
 # RUN
 # ==========================
-
-print("Bot Started...")
 
 # ==========================
 # SINGLE FILE STORE
@@ -278,6 +263,16 @@ async def check_file_button(
 # START BATCH
 # ==========================
 
+@app.on_message(filters.command("batch"))
+async def start_batch(client, message):
+
+    ACTIVE_BATCH[message.from_user.id] = []
+
+    await message.reply_text(
+        "📦 Batch Mode Started\n\n"
+        "Send files now.\n"
+        "When finished send /done"
+    )
 
 
 # ==========================
@@ -294,72 +289,11 @@ async def check_file_button(
         filters.animation
     )
 )
-async def batch_collector(
-    client,
-    message
-):
-
-    user_id = message.from_user.id
-
-    if user_id not in ACTIVE_BATCH:
-        return
-
-    stored = await message.copy(
-        STORE_CHANNEL
-    )
-
-    ACTIVE_BATCH[user_id].append(
-        stored.id
-    )
-
-    await message.reply_text(
-        "✅ Added To Batch"
-    )
 
 
 # ==========================
 # DONE BATCH
 # ==========================
-
-@app.on_message(filters.command("done"))
-async def done_batch(
-    client,
-    message
-):
-
-    user_id = message.from_user.id
-
-    if user_id not in ACTIVE_BATCH:
-
-        await message.reply_text(
-            "❌ No Active Batch"
-        )
-
-        return
-
-    batch_id = (
-        str(uuid.uuid4())[:8]
-    )
-
-    await save_batch(
-        batch_id,
-        ACTIVE_BATCH[user_id]
-    )
-
-    del ACTIVE_BATCH[user_id]
-
-    me = await client.get_me()
-
-    link = (
-        f"https://t.me/"
-        f"{me.username}"
-        f"?start=batch_{batch_id}"
-    )
-
-    await message.reply_text(
-        f"✅ Batch Created\n\n"
-        f"🔗 {link}"
-    )
 
 
 # ==========================
