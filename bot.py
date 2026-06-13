@@ -10,6 +10,10 @@ import asyncio
 # CONFIG
 # =========================
 
+API_ID = 
+API_HASH = "YOUR_API_HASH"
+BOT_TOKEN = "YOUR_BOT_TOKEN"
+
 # Force Subscribe Channel
 FORCE_CHANNEL = -1003310527316
 
