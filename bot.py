@@ -42,24 +42,22 @@ app = Client(
 # FORCE SUB CHECK
 # =========================
 
-async def is_joined(user_id):
-    try:
-        member = await app.get_chat_member(
-            FORCE_CHANNEL,
-            user_id
-        )
-
-        print("STATUS =", member.status)
-
-        return True
-
-    except UserNotParticipant:
-        print("NOT JOINED")
-        return False
-
-    except Exception as e:
-        print("JOIN CHECK ERROR =", e)
-        return False
+buttons = InlineKeyboardMarkup(
+    [
+        [
+            InlineKeyboardButton(
+                "📢 Join Channel",
+                url=CHANNEL_LINK
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "✅ Check Channel",
+                callback_data="checksub"
+            )
+        ]
+    ]
+)
 
 # =========================
 # AUTO DELETE
@@ -89,23 +87,22 @@ async def start_handler(client, message):
     user_id = message.from_user.id
 
     if not await is_joined(user_id):
-
-        buttons = InlineKeyboardMarkup(
-            [
-                [
-                    InlineKeyboardButton(
-                        "📢 Join Channel",
-                        url=CHANNEL_LINK
-                    )
-                ]
-            ]
-        )
-
-        await message.reply_text(
-            "⚠️ আগে চ্যানেলে Join করুন।",
-            reply_markup=buttons
-        )
-        return
+  buttons = InlineKeyboardMarkup(
+    [
+       [
+            InlineKeyboardButton(
+                "📢 Join Channel",
+                url=CHANNEL_LINK
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "✅ Check Channel",
+                callback_data="checksub"
+            )
+        ]
+    ]
+)
 
     # Link open
     if len(message.command) > 1:
@@ -161,21 +158,21 @@ async def store_file(client, message):
     if not await is_joined(user_id):
 
         buttons = InlineKeyboardMarkup(
-            [
-                [
-                    InlineKeyboardButton(
-                        "📢 Join Channel",
-                        url=CHANNEL_LINK
-                    )
-                ]
-            ]
-        )
-
-        await message.reply_text(
-            "⚠️ You Have to Join the Channel First",
-            reply_markup=buttons
-        )
-        return
+    [
+        [
+            InlineKeyboardButton(
+                "📢 Join Channel",
+                url=CHANNEL_LINK
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "✅ Check Channel",
+                callback_data="checksub"
+            )
+        ]
+    ]
+)
 
     stored = await message.copy(
         STORE_CHANNEL
@@ -202,5 +199,29 @@ async def store_file(client, message):
 # =========================
 
 print("Bot Started...")
+from pyrogram.types import CallbackQuery
 
+@app.on_callback_query(filters.regex("checksub"))
+async def check_sub_callback(client, query: CallbackQuery):
+
+    user_id = query.from_user.id
+
+    if await is_joined(user_id):
+
+        await query.answer(
+            "✅ Channel Verified!",
+            show_alert=True
+        )
+
+        await query.message.edit_text(
+            "✅ Channel Verified!\n\n"
+            "এখন আবার Link Open করুন।"
+        )
+
+    else:
+
+        await query.answer(
+            "❌ এখনও Channel Join করেননি!",
+            show_alert=True
+        )
 app.run()
