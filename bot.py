@@ -613,4 +613,3 @@ async def ignore_button(
 print("Bot Started Successfully")
 
 app.run()
-  app.run()
