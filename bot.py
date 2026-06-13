@@ -1,4 +1,3 @@
-```python
 from pyrogram import Client, filters
 from pyrogram.types import (
     InlineKeyboardMarkup,
@@ -217,4 +216,3 @@ async def store_file(client, message):
 print("Bot Started...")
 
 app.run()
-```
