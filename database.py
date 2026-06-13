@@ -57,3 +57,7 @@ async def get_batch(batch_id):
     return await batches_col.find_one(
         {"batch_id": batch_id}
     )
+save_file()
+get_file()
+save_batch()
+get_batch()
