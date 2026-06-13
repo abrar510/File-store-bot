@@ -1,4 +1,4 @@
-```python
+python
 from pyrogram import Client, filters
 from pyrogram.errors import UserNotParticipant
 from pyrogram.types import (
