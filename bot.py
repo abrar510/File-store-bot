@@ -8,7 +8,9 @@ from pyrogram.errors import UserNotParticipant
 
 from database import (
     save_file,
-    get_file
+    get_file,
+    save_batch,
+    get_batch
 )
 
 import os
@@ -42,6 +44,12 @@ app = Client(
 )
 
 # ==========================
+# BATCH MEMORY
+# ==========================
+
+ACTIVE_BATCH = {}
+
+# ==========================
 # FORCE SUBSCRIBE
 # ==========================
 
@@ -49,12 +57,15 @@ async def is_joined(user_id):
 
     try:
 
-        await app.get_chat_member(
+        member = await app.get_chat_member(
             FORCE_CHANNEL,
             user_id
         )
 
-        return True
+        return member.status not in [
+            "left",
+            "kicked"
+        ]
 
     except UserNotParticipant:
 
@@ -66,6 +77,28 @@ async def is_joined(user_id):
 
         return False
 
+# ==========================
+# BUTTONS
+# ==========================
+
+def join_button(callback_data):
+
+    return InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton(
+                    "📢 Join Channel",
+                    url=CHANNEL_LINK
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "✅ Check Channel",
+                    callback_data=callback_data
+                )
+            ]
+        ]
+    )
 
 # ==========================
 # AUTO DELETE
@@ -84,79 +117,30 @@ async def auto_delete(messages):
         except:
             pass
 
-
 # ==========================
-# START
-# ==========================
-
-
-
-
-# ==========================
-# CHECK CHANNEL BUTTON
+# HOME
 # ==========================
 
-@app.on_callback_query(
-    filters.regex("^checkfile_")
-)
-async def check_file_callback(
+@app.on_message(filters.command("start"))
+async def start_home(
     client,
-    query: CallbackQuery
+    message
 ):
 
-    user_id = query.from_user.id
+    if len(message.command) == 1:
 
-    file_code = (
-        query.data.replace(
-            "checkfile_",
-            ""
-        )
-    )
-
-    if not await is_joined(
-        user_id
-    ):
-
-        await query.answer(
-            "❌ Join Channel First",
-            show_alert=True
+        await message.reply_text(
+            "📂 Send a file to generate link.\n\n"
+            "📦 Use /batch for batch links."
         )
 
         return
 
-    data = await get_file(
-        file_code
-    )
+# ==========================
+# RUN
+# ==========================
 
-    if not data:
-
-        await query.answer(
-            "❌ File Not Found",
-            show_alert=True
-        )
-
-        return
-
-    sent = await client.copy_message(
-        chat_id=query.message.chat.id,
-        from_chat_id=STORE_CHANNEL,
-        message_id=data["message_id"]
-    )
-
-    warn = await query.message.reply_text(
-        "⚠️ This file will be deleted after 10 minutes."
-    )
-
-    asyncio.create_task(
-        auto_delete(
-            [sent, warn]
-        )
-    )
-
-    await query.answer(
-        "✅ Verified"
-    )
-
+print("Bot Started...")
 
 # ==========================
 # SINGLE FILE STORE
@@ -172,234 +156,132 @@ async def check_file_callback(
         filters.animation
     )
 )
-async def single_file_store(
-    client,
-    message
-):
+async def single_file_store(client, message):
 
-    stored = await message.copy(
-        STORE_CHANNEL
-    )
+    user_id = message.from_user.id
 
-    file_code = (
-        str(uuid.uuid4())[:8]
-    )
+    # Batch mode হলে skip
+    if user_id in ACTIVE_BATCH:
+        return
 
-    await save_file(
-        file_code,
-        stored.id
-    )
-
-    me = await client.get_me()
-
-    link = (
-        f"https://t.me/"
-        f"{me.username}"
-        f"?start=file_{file_code}"
-    )
-
-    await message.reply_text(
-        "✅ File Stored Successfully!\n\n"
-        f"🔗 {link}"
-    )
-    # ==========================
-# START FILE LINK
-# ==========================
-
-@app.on_message(filters.command("start"))
-async def start_handler(client, message):
-
-    if len(message.command) <= 1:
+    # Force Subscribe Check
+    if not await is_joined(user_id):
 
         await message.reply_text(
-            "📁 Send a file or use /batch"
+            "⚠️ First join our channel.",
+            reply_markup=join_button("ignore")
         )
         return
 
-    param = message.command[1]
+    try:
 
-    # ======================
-    # SINGLE FILE
-    # ======================
-
-    if param.startswith("file_"):
-
-        file_code = param.replace(
-            "file_",
-            ""
+        stored = await message.copy(
+            STORE_CHANNEL
         )
 
-        if not await is_joined(
-            message.from_user.id
-        ):
+        file_code = str(uuid.uuid4())[:8]
 
-            buttons = InlineKeyboardMarkup(
-                [
-                    [
-                        InlineKeyboardButton(
-                            "📢 Join Channel",
-                            url=CHANNEL_LINK
-                        )
-                    ],
-                    [
-                        InlineKeyboardButton(
-                            "✅ Check Channel",
-                            callback_data=f"checkfile_{file_code}"
-                        )
-                    ]
-                ]
-            )
-
-            await message.reply_text(
-                "⚠️ First Join Our Channel.",
-                reply_markup=buttons
-            )
-
-            return
-
-        data = await get_file(
-            file_code
+        await save_file(
+            file_code,
+            stored.id
         )
 
-        if not data:
+        me = await client.get_me()
 
-            await message.reply_text(
-                "❌ File Not Found"
-            )
-
-            return
-
-        sent = await client.copy_message(
-            chat_id=message.chat.id,
-            from_chat_id=STORE_CHANNEL,
-            message_id=data["message_id"]
+        link = (
+            f"https://t.me/{me.username}"
+            f"?start=file_{file_code}"
         )
 
-        warn = await message.reply_text(
-            "⚠️ This file will be deleted after 10 minutes."
+        await message.reply_text(
+            f"✅ File Stored Successfully!\n\n🔗 {link}"
         )
 
-        asyncio.create_task(
-            auto_delete(
-                [sent, warn]
-            )
-        )
+    except Exception as e:
 
-        return
+        print("STORE ERROR:", e)
 
-    # ======================
-    # BATCH FILE
-    # ======================
-
-    if param.startswith("batch_"):
-
-        batch_id = param.replace(
-            "batch_",
-            ""
-        )
-
-        if not await is_joined(
-            message.from_user.id
-        ):
-
-            buttons = InlineKeyboardMarkup(
-                [
-                    [
-                        InlineKeyboardButton(
-                            "📢 Join Channel",
-                            url=CHANNEL_LINK
-                        )
-                    ],
-                    [
-                        InlineKeyboardButton(
-                            "✅ Check Channel",
-                            callback_data=f"checkbatch_{batch_id}"
-                        )
-                    ]
-                ]
-            )
-
-            await message.reply_text(
-                "⚠️ First Join Our Channel.",
-                reply_markup=buttons
-            )
-
-            return
-
-        from database import get_batch
-
-        data = await get_batch(
-            batch_id
-        )
-
-        if not data:
-
-            await message.reply_text(
-                "❌ Batch Not Found"
-            )
-
-            return
-
-        sent_messages = []
-
-        for msg_id in data["message_ids"]:
-
-            sent = await client.copy_message(
-                chat_id=message.chat.id,
-                from_chat_id=STORE_CHANNEL,
-                message_id=msg_id
-            )
-
-            sent_messages.append(
-                sent
-            )
-
-        warn = await message.reply_text(
-            "⚠️ Files will be deleted after 10 minutes."
-        )
-
-        sent_messages.append(
-            warn
-        )
-
-        asyncio.create_task(
-            auto_delete(
-                sent_messages
-            )
+        await message.reply_text(
+            "❌ Failed to store file."
         )
 
 
 # ==========================
-# BATCH MEMORY
+# OPEN SINGLE FILE
 # ==========================
 
-ACTIVE_BATCH = {}
 
 
+# ==========================
+# CHECK FILE BUTTON
+# ==========================
+
+@app.on_callback_query(
+    filters.regex("^checkfile_")
+)
+async def check_file_button(
+    client,
+    query: CallbackQuery
+):
+
+    file_code = query.data.replace(
+        "checkfile_",
+        ""
+    )
+
+    if not await is_joined(
+        query.from_user.id
+    ):
+
+        await query.answer(
+            "❌ Join channel first",
+            show_alert=True
+        )
+
+        return
+
+    data = await get_file(
+        file_code
+    )
+
+    if not data:
+
+        await query.answer(
+            "❌ File not found",
+            show_alert=True
+        )
+
+        return
+
+    sent = await client.copy_message(
+        chat_id=query.message.chat.id,
+        from_chat_id=STORE_CHANNEL,
+        message_id=data["msg_id"]
+    )
+
+    warn = await query.message.reply_text(
+        "⚠️ File will be deleted after 10 minutes."
+    )
+
+    asyncio.create_task(
+        auto_delete(
+            [sent, warn]
+        )
+    )
+
+    await query.answer(
+        "✅ Verified",
+        show_alert=True
+    )
+    
 # ==========================
 # START BATCH
 # ==========================
 
-@app.on_message(
-    filters.command("batch")
-)
-async def batch_start(
-    client,
-    message
-):
-
-    ACTIVE_BATCH[
-        message.from_user.id
-    ] = []
-
-    await message.reply_text(
-        "📂 Send files now.\n\n"
-        "When finished send /done"
-    )
 
 
 # ==========================
-# COLLECT BATCH FILES
+# BATCH COLLECTOR
 # ==========================
 
 @app.on_message(
@@ -426,9 +308,7 @@ async def batch_collector(
         STORE_CHANNEL
     )
 
-    ACTIVE_BATCH[
-        user_id
-    ].append(
+    ACTIVE_BATCH[user_id].append(
         stored.id
     )
 
@@ -441,10 +321,8 @@ async def batch_collector(
 # DONE BATCH
 # ==========================
 
-@app.on_message(
-    filters.command("done")
-)
-async def batch_done(
+@app.on_message(filters.command("done"))
+async def done_batch(
     client,
     message
 ):
@@ -459,8 +337,6 @@ async def batch_done(
 
         return
 
-    from database import save_batch
-
     batch_id = (
         str(uuid.uuid4())[:8]
     )
@@ -470,9 +346,7 @@ async def batch_done(
         ACTIVE_BATCH[user_id]
     )
 
-    del ACTIVE_BATCH[
-        user_id
-    ]
+    del ACTIVE_BATCH[user_id]
 
     me = await client.get_me()
 
@@ -483,10 +357,150 @@ async def batch_done(
     )
 
     await message.reply_text(
-        "✅ Batch Created\n\n"
+        f"✅ Batch Created\n\n"
         f"🔗 {link}"
     )
 
+
+# ==========================
+# FINAL START HANDLER
+# ==========================
+
+@app.on_message(filters.command("start"))
+async def start_handler(
+    client,
+    message
+):
+
+    # Home
+    if len(message.command) == 1:
+
+        await message.reply_text(
+            "📂 Send File For Single Link\n\n"
+            "📦 Use /batch For Batch Link"
+        )
+
+        return
+
+    param = message.command[1]
+
+    # ======================
+    # SINGLE FILE
+    # ======================
+
+    if param.startswith("file_"):
+
+        file_code = param.replace(
+            "file_",
+            ""
+        )
+
+        if not await is_joined(
+            message.from_user.id
+        ):
+
+            await message.reply_text(
+                "⚠️ First Join Our Channel",
+                reply_markup=join_button(
+                    f"checkfile_{file_code}"
+                )
+            )
+
+            return
+
+        data = await get_file(
+            file_code
+        )
+
+        if not data:
+
+            await message.reply_text(
+                "❌ File Not Found"
+            )
+
+            return
+
+        sent = await client.copy_message(
+            chat_id=message.chat.id,
+            from_chat_id=STORE_CHANNEL,
+            message_id=data["msg_id"]
+        )
+
+        warn = await message.reply_text(
+            "⚠️ File Will Be Deleted After 10 Minutes"
+        )
+
+        asyncio.create_task(
+            auto_delete(
+                [sent, warn]
+            )
+        )
+
+        return
+
+    # ======================
+    # BATCH FILE
+    # ======================
+
+    if param.startswith("batch_"):
+
+        batch_code = param.replace(
+            "batch_",
+            ""
+        )
+
+        if not await is_joined(
+            message.from_user.id
+        ):
+
+            await message.reply_text(
+                "⚠️ First Join Our Channel",
+                reply_markup=join_button(
+                    f"checkbatch_{batch_code}"
+                )
+            )
+
+            return
+
+        data = await get_batch(
+            batch_code
+        )
+
+        if not data:
+
+            await message.reply_text(
+                "❌ Batch Not Found"
+            )
+
+            return
+
+        sent_messages = []
+
+        for msg_id in data["ids"]:
+
+            sent = await client.copy_message(
+                chat_id=message.chat.id,
+                from_chat_id=STORE_CHANNEL,
+                message_id=msg_id
+            )
+
+            sent_messages.append(
+                sent
+            )
+
+        warn = await message.reply_text(
+            "⚠️ Files Will Be Deleted After 10 Minutes"
+        )
+
+        sent_messages.append(
+            warn
+        )
+
+        asyncio.create_task(
+            auto_delete(
+                sent_messages
+            )
+        )
 
 # ==========================
 # CHECK BATCH BUTTON
@@ -495,12 +509,12 @@ async def batch_done(
 @app.on_callback_query(
     filters.regex("^checkbatch_")
 )
-async def check_batch(
+async def check_batch_button(
     client,
-    query
+    query: CallbackQuery
 ):
 
-    batch_id = query.data.replace(
+    batch_code = query.data.replace(
         "checkbatch_",
         ""
     )
@@ -516,10 +530,8 @@ async def check_batch(
 
         return
 
-    from database import get_batch
-
     data = await get_batch(
-        batch_id
+        batch_code
     )
 
     if not data:
@@ -533,34 +545,63 @@ async def check_batch(
 
     sent_messages = []
 
-    for msg_id in data["message_ids"]:
+    try:
 
-        sent = await client.copy_message(
-            chat_id=query.message.chat.id,
-            from_chat_id=STORE_CHANNEL,
-            message_id=msg_id
+        for msg_id in data["ids"]:
+
+            sent = await client.copy_message(
+                chat_id=query.message.chat.id,
+                from_chat_id=STORE_CHANNEL,
+                message_id=msg_id
+            )
+
+            sent_messages.append(
+                sent
+            )
+
+        warn = await query.message.reply_text(
+            "⚠️ Files Will Be Deleted After 10 Minutes"
         )
 
         sent_messages.append(
-            sent
+            warn
         )
 
-    warn = await query.message.reply_text(
-        "⚠️ Files will be deleted after 10 minutes."
-    )
-
-    sent_messages.append(
-        warn
-    )
-
-    asyncio.create_task(
-        auto_delete(
-            sent_messages
+        asyncio.create_task(
+            auto_delete(
+                sent_messages
+            )
         )
-    )
+
+        await query.answer(
+            "✅ Channel Verified",
+            show_alert=True
+        )
+
+    except Exception as e:
+
+        print("BATCH ERROR:", e)
+
+        await query.answer(
+            "❌ Failed To Send Files",
+            show_alert=True
+        )
+
+
+# ==========================
+# IGNORE BUTTON
+# ==========================
+
+@app.on_callback_query(
+    filters.regex("^ignore$")
+)
+async def ignore_button(
+    client,
+    query
+):
 
     await query.answer(
-        "✅ Verified",
+        "Join Channel First",
         show_alert=True
     )
 
@@ -569,6 +610,7 @@ async def check_batch(
 # RUN
 # ==========================
 
-print("Bot Started...")
+print("Bot Started Successfully")
 
 app.run()
+  app.run()
