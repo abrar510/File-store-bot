@@ -10,22 +10,23 @@ import asyncio
 # CONFIG
 # =========================
 
-API_ID = 
-API_HASH = "YOUR_API_HASH"
-BOT_TOKEN = "YOUR_BOT_TOKEN"
+import os
+
+API_ID = int(os.getenv("API_ID"))
+API_HASH = os.getenv("API_HASH")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 # Force Subscribe Channel
-FORCE_CHANNEL = -1003310527316
+FORCE_CHANNEL = int(os.getenv("FORCE_CHANNEL"))
 
 # Store Channel
-STORE_CHANNEL = -1003603082549
+STORE_CHANNEL = int(os.getenv("STORE_CHANNEL"))
 
 # Auto Delete Time (Seconds)
 AUTO_DELETE_TIME = 600
 
-# Private Channel Link
-CHANNEL_LINK = "https://t.me/+-zeuklTsZrgxODM1"
-
+# Public Channel Link
+CHANNEL_LINK = os.getenv("CHANNEL_LINK")
 # =========================
 
 app = Client(
@@ -48,9 +49,11 @@ async def is_joined(user_id):
 
         return member.status not in ["left", "kicked"]
 
-    except:
+    except UserNotParticipant:
         return False
 
+    except Exception:
+        return False
 
 # =========================
 # AUTO DELETE
@@ -111,8 +114,8 @@ async def start_handler(client, message):
             )
 
             warn = await message.reply_text(
-                "⚠️ এই ফাইল ১০ মিনিট পরে ডিলিট হবে।\n"
-                "Saved Messages-এ ফরওয়ার্ড করে রাখুন।"
+               "›› Yᴏᴜʀ ғɪʟᴇs ᴡɪʟʟ ʙᴇ ᴅᴇʟᴇᴛᴇᴅ ᴡɪᴛʜɪɴ 10 Mɪɴᴜᴛᴇs.\n"
+    "Sᴏ ᴘʟᴇᴀsᴇ ғᴏʀᴡᴀʀᴅ ᴛʜᴇᴍ ᴛᴏ Saved Messages ғᴏʀ ғᴜᴛᴜʀᴇ ᴀᴠᴀɪʟᴀʙɪʟɪᴛʏ."
             )
 
             asyncio.create_task(
