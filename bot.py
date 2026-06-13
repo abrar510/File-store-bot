@@ -1,34 +1,29 @@
+```python
 from pyrogram import Client, filters
 from pyrogram.errors import UserNotParticipant
 from pyrogram.types import (
     InlineKeyboardMarkup,
-    InlineKeyboardButton
+    InlineKeyboardButton,
+    CallbackQuery
 )
 import asyncio
+import os
 
 # =========================
 # CONFIG
 # =========================
 
-import os
-
 API_ID = int(os.getenv("API_ID"))
-
 API_HASH = os.getenv("API_HASH")
-
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
-# Force Subscribe Channel
 FORCE_CHANNEL = int(os.getenv("FORCE_CHANNEL"))
-
-# Store Channel
 STORE_CHANNEL = int(os.getenv("STORE_CHANNEL"))
 
-# Auto Delete Time (Seconds)
+CHANNEL_LINK = os.getenv("CHANNEL_LINK")
+
 AUTO_DELETE_TIME = 600
 
-# Public Channel Link
-CHANNEL_LINK = os.getenv("CHANNEL_LINK")
 # =========================
 
 app = Client(
@@ -42,28 +37,27 @@ app = Client(
 # FORCE SUB CHECK
 # =========================
 
-buttons = InlineKeyboardMarkup(
-    [
-        [
-            InlineKeyboardButton(
-                "📢 Join Channel",
-                url=CHANNEL_LINK
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "✅ Check Channel",
-                callback_data="checksub"
-            )
-        ]
-    ]
-)
+async def is_joined(user_id):
+    try:
+        await app.get_chat_member(
+            FORCE_CHANNEL,
+            user_id
+        )
+        return True
+
+    except UserNotParticipant:
+        return False
+
+    except Exception as e:
+        print("JOIN CHECK ERROR:", e)
+        return False
+
 
 # =========================
 # AUTO DELETE
 # =========================
 
-async def delete_after(file_msg, warning_msg):
+async def auto_delete(file_msg, warn_msg):
     await asyncio.sleep(AUTO_DELETE_TIME)
 
     try:
@@ -72,7 +66,7 @@ async def delete_after(file_msg, warning_msg):
         pass
 
     try:
-        await warning_msg.delete()
+        await warn_msg.delete()
     except:
         pass
 
@@ -86,46 +80,56 @@ async def start_handler(client, message):
 
     user_id = message.from_user.id
 
-    if not await is_joined(user_id):
-  buttons = InlineKeyboardMarkup(
-    [
-       [
-            InlineKeyboardButton(
-                "📢 Join Channel",
-                url=CHANNEL_LINK
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "✅ Check Channel",
-                callback_data="checksub"
-            )
-        ]
-    ]
-)
-
-    # Link open
+    # file link
     if len(message.command) > 1:
 
+        file_id = message.command[1]
+
+        if not await is_joined(user_id):
+
+            buttons = InlineKeyboardMarkup(
+                [
+                    [
+                        InlineKeyboardButton(
+                            "📢 Join Channel",
+                            url=CHANNEL_LINK
+                        )
+                    ],
+                    [
+                        InlineKeyboardButton(
+                            "✅ Check Channel",
+                            callback_data=f"check_{file_id}"
+                        )
+                    ]
+                ]
+            )
+
+            await message.reply_text(
+                "⚠️ First Join Our Channel.",
+                reply_markup=buttons
+            )
+            return
+
         try:
-            file_id = int(message.command[1])
 
             sent = await client.copy_message(
                 chat_id=message.chat.id,
                 from_chat_id=STORE_CHANNEL,
-                message_id=file_id
+                message_id=int(file_id)
             )
 
             warn = await message.reply_text(
-               "›› Yᴏᴜʀ ғɪʟᴇs ᴡɪʟʟ ʙᴇ ᴅᴇʟᴇᴛᴇᴅ ᴡɪᴛʜɪɴ 10 Mɪɴᴜᴛᴇs.\n\n"
-    "Sᴏ ᴘʟᴇᴀsᴇ ғᴏʀᴡᴀʀᴅ ᴛʜᴇᴍ ᴛᴏ Saved Messages ғᴏʀ ғᴜᴛᴜʀᴇ ᴀᴠᴀɪʟᴀʙɪʟɪᴛʏ."
+                "⚠️ File will be deleted after 10 minutes.\n"
+                "Forward it to Saved Messages."
             )
 
             asyncio.create_task(
-                delete_after(sent, warn)
+                auto_delete(sent, warn)
             )
 
-        except Exception:
+        except Exception as e:
+            print(e)
+
             await message.reply_text(
                 "❌ File Not Found."
             )
@@ -133,8 +137,59 @@ async def start_handler(client, message):
     else:
 
         await message.reply_text(
-            "📂 Send me a File\n\n"
-            "I will give you a Link"
+            "📂 Send me a file.\n\n"
+            "I will generate a share link."
+        )
+
+
+# =========================
+# CHECK CHANNEL BUTTON
+# =========================
+
+@app.on_callback_query(filters.regex("^check_"))
+async def check_channel(client, query: CallbackQuery):
+
+    user_id = query.from_user.id
+
+    file_id = query.data.split("_")[1]
+
+    if await is_joined(user_id):
+
+        try:
+
+            sent = await client.copy_message(
+                chat_id=query.message.chat.id,
+                from_chat_id=STORE_CHANNEL,
+                message_id=int(file_id)
+            )
+
+            warn = await query.message.reply_text(
+                "⚠️ File will be deleted after 10 minutes.\n"
+                "Forward it to Saved Messages."
+            )
+
+            asyncio.create_task(
+                auto_delete(sent, warn)
+            )
+
+            await query.answer(
+                "✅ Channel Verified",
+                show_alert=True
+            )
+
+        except Exception as e:
+            print(e)
+
+            await query.answer(
+                "❌ File Not Found",
+                show_alert=True
+            )
+
+    else:
+
+        await query.answer(
+            "❌ Join Channel First",
+            show_alert=True
         )
 
 
@@ -148,7 +203,8 @@ async def start_handler(client, message):
         filters.document |
         filters.video |
         filters.audio |
-        filters.photo
+        filters.photo |
+        filters.animation
     )
 )
 async def store_file(client, message):
@@ -158,40 +214,49 @@ async def store_file(client, message):
     if not await is_joined(user_id):
 
         buttons = InlineKeyboardMarkup(
-    [
-        [
-            InlineKeyboardButton(
-                "📢 Join Channel",
-                url=CHANNEL_LINK
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "✅ Check Channel",
-                callback_data="checksub"
-            )
-        ]
-    ]
-)
+            [
+                [
+                    InlineKeyboardButton(
+                        "📢 Join Channel",
+                        url=CHANNEL_LINK
+                    )
+                ]
+            ]
+        )
 
-    stored = await message.copy(
-        STORE_CHANNEL
-    )
+        await message.reply_text(
+            "⚠️ Join Our Channel First.",
+            reply_markup=buttons
+        )
 
-    bot_username = (
-        await client.get_me()
-    ).username
+        return
 
-    link = (
-        f"https://t.me/"
-        f"{bot_username}"
-        f"?start={stored.id}"
-    )
+    try:
 
-    await message.reply_text(
-        f"✅ File Stored Successfully!\n\n"
-        f"🔗 {link}"
-    )
+        stored = await message.copy(
+            STORE_CHANNEL
+        )
+
+        me = await client.get_me()
+
+        link = (
+            f"https://t.me/"
+            f"{me.username}"
+            f"?start={stored.id}"
+        )
+
+        await message.reply_text(
+            f"✅ File Stored Successfully!\n\n"
+            f"🔗 {link}"
+        )
+
+    except Exception as e:
+
+        print(e)
+
+        await message.reply_text(
+            "❌ Failed To Store File."
+        )
 
 
 # =========================
@@ -199,29 +264,6 @@ async def store_file(client, message):
 # =========================
 
 print("Bot Started...")
-from pyrogram.types import CallbackQuery
 
-@app.on_callback_query(filters.regex("checksub"))
-async def check_sub_callback(client, query: CallbackQuery):
-
-    user_id = query.from_user.id
-
-    if await is_joined(user_id):
-
-        await query.answer(
-            "✅ Channel Verified!",
-            show_alert=True
-        )
-
-        await query.message.edit_text(
-            "✅ Channel Verified!\n\n"
-            "এখন আবার Link Open করুন।"
-        )
-
-    else:
-
-        await query.answer(
-            "❌ এখনও Channel Join করেননি!",
-            show_alert=True
-        )
 app.run()
+```
