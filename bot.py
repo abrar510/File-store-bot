@@ -116,7 +116,7 @@ async def start_command(client, message):
         )
 
         warn = await message.reply_text(
-            "⚠️ This file will be deleted after 10 minutes."
+            "⚠️ This file will be deleted after 10 minutes.Forward it to Saved Messages."
         )
 
         asyncio.create_task(
