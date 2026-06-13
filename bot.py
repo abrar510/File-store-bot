@@ -38,17 +38,20 @@ app = Client(
 
 async def is_joined(user_id):
     try:
-        await app.get_chat_member(
+        member = await app.get_chat_member(
             FORCE_CHANNEL,
             user_id
         )
+
+        print("STATUS =", member.status)
+
         return True
 
     except UserNotParticipant:
         return False
 
     except Exception as e:
-        print("JOIN CHECK ERROR:", e)
+        print("JOIN CHECK ERROR =", e)
         return False
 
 
